@@ -1,6 +1,5 @@
-FROM python:3.7
+#FROM python:3.7
+FROM footprintai/aixserver:v0.5.1-base
 
 COPY . .
-RUN pip install --upgrade pip && pip install -e ./kfserving
-RUN pip install -e ./aixexplainer
 ENTRYPOINT ["python", "-m", "aixserver"]

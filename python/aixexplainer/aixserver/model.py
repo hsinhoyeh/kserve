@@ -14,11 +14,14 @@
 from typing import Dict
 
 import asyncio
+import base64
+import io
 import logging
 import kfserving
 import numpy as np
 from aix360.algorithms.lime import LimeImageExplainer
 from lime.wrappers.scikit_image import SegmentationAlgorithm
+from PIL import Image
 
 
 class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
@@ -42,11 +45,27 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
         return self.ready
 
     def _predict(self, input_im):
-        scoring_data = {'instances': input_im.tolist()}
+        #scoring_data = {'instances': input_im.tolist()}
+        scoring_data = self._wrap_numpyarr_to_predict_inputs(input_im)
 
         loop = asyncio.get_running_loop()
         resp = loop.run_until_complete(self.predict(scoring_data))
         return np.array(resp["predictions"])
+
+    def _wrap_numpyarr_to_predict_inputs(self, input_im: np.ndarray):
+        input_base64 = base64.b64encode(input_im)
+        return {"instances": {"image_bytes": {"b64": input_base64}}}
+
+    def _get_instance_binary_inputs(self, first_instance):
+        logging.info("first instance type:%s",type(first_instance))
+        logging.info("first instance isdict:%s",isinstance(first_instance, dict))
+        logging.info("first instance hasb64:%s", "b64" in first_instance)
+        logging.info("first instance keys:%s", first_instance.keys())
+
+        if isinstance(first_instance, dict) and "image_bytes" in first_instance and "b64" in first_instance["image_bytes"]: # first_instance = {"image_bytes": {"b64":xxx}}
+            logging.info("first instance is dict and has b64, coverting")
+            return Image.open(io.BytesIO(base64.b64decode(first_instance["image_bytes"]["b64"])))
+        return first_instance
 
     def explain(self, request: Dict) -> Dict:
         instances = request["instances"]
@@ -70,7 +89,8 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
             raise Exception("Failed to specify parameters: %s", (err,))
 
         try:
-            inputs = np.array(instances[0])
+            #inputs = np.array(instances[0])
+            inputs = np.array(self._get_instance_binary_inputs(instances[0]))
             logging.info("Calling explain on image of shape %s", (inputs.shape,))
         except Exception as err:
             raise Exception(
