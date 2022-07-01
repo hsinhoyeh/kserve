@@ -52,7 +52,7 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
         resp = loop.run_until_complete(self.predict(scoring_data))
         predictions = resp["predictions"]
         logging.info("_predict.results:%s", predictions)
-	# output: "predictions": [
+        # output: "predictions": [
         #        {
         #            "scores": [1.47944235e-07, 3.65586068e-08, 0.796582818, 1.05895253e-07, 0.203416958, 3.8090274e-08],
         #            "prediction": 2,
@@ -60,14 +60,13 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
         #        }
         #    ]
         #}
-	num_classes = len(predictions[0]["scores"])
+        num_classes = len(predictions[0]["scores"])
         num_samples = len(predictions)
-        # class_preds is in such shape:
-        # [ [sample_1_to_class_1, sample_2_to_class_1, ...] [sample_1_to_class_2, ], ... ]
-        class_preds = [[] for x in range(0, num_classes)]
-            for class_index in range(0, class_preds):
-                for sample_index in range(0, num_samples):
-                    class_preds[class_index].append(predictions[sample_index]["scores"][j])
+        ## class_preds is in such shape:
+        ## [ [sample_1_to_class_1, sample_1_to_class_2, ...] [sample_2_to_class_1, ], ... ]
+        class_preds = [[] for x in range(0, num_samples)]
+        for sample_index in range(0, num_samples):
+                class_preds[sample_index] = predictions[sample_index]["scores"]
         logging.info("_predict.classpred:%s", class_preds)
         return np.array(class_preds)
 
@@ -81,7 +80,7 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
             buff = io.BytesIO()
             pil_img.save(buff, format="PNG")
             input_base64_str = base64.b64encode(buff.getvalue()).decode("utf-8")    
-            instances.append({"image_bytes": {"b64": input_base64_str}, "key": "%d".format(index)})
+            instances.append({"image_bytes": {"b64": input_base64_str}, "key": "{}".format(index)})
             index = index + 1
 
         return {"instances": instances}
