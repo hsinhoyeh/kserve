@@ -50,11 +50,41 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
 
         loop = asyncio.get_running_loop()
         resp = loop.run_until_complete(self.predict(scoring_data))
-        return np.array(resp["predictions"])
+        predictions = resp["predictions"]
+        logging.info("_predict.results:%s", predictions)
+	# output: "predictions": [
+        #        {
+        #            "scores": [1.47944235e-07, 3.65586068e-08, 0.796582818, 1.05895253e-07, 0.203416958, 3.8090274e-08],
+        #            "prediction": 2,
+        #            "key": "1"
+        #        }
+        #    ]
+        #}
+	num_classes = len(predictions[0]["scores"])
+        num_samples = len(predictions)
+        # class_preds is in such shape:
+        # [ [sample_1_to_class_1, sample_2_to_class_1, ...] [sample_1_to_class_2, ], ... ]
+        class_preds = [[] for x in range(0, num_classes)]
+            for class_index in range(0, class_preds):
+                for sample_index in range(0, num_samples):
+                    class_preds[class_index].append(predictions[sample_index]["scores"][j])
+        logging.info("_predict.classpred:%s", class_preds)
+        return np.array(class_preds)
 
     def _wrap_numpyarr_to_predict_inputs(self, input_im: np.ndarray):
-        input_base64 = base64.b64encode(input_im)
-        return {"instances": {"image_bytes": {"b64": input_base64}}}
+        logging.info("numpyarr wrapper:%s",type(input_im))
+        logging.info("numpyarr wrapper:%s",input_im.shape)
+        instances = []
+        index = 1;
+        for slice_input_im in input_im:
+            pil_img = Image.fromarray(slice_input_im)
+            buff = io.BytesIO()
+            pil_img.save(buff, format="PNG")
+            input_base64_str = base64.b64encode(buff.getvalue()).decode("utf-8")    
+            instances.append({"image_bytes": {"b64": input_base64_str}, "key": "%d".format(index)})
+            index = index + 1
+
+        return {"instances": instances}
 
     def _get_instance_binary_inputs(self, first_instance):
         logging.info("first instance type:%s",type(first_instance))
