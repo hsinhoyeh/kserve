@@ -128,9 +128,10 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
         try:
             if str.lower(self.explainer_type) == "limeimages":
                 explainer = LimeImageExplainer(verbose=True)
-                segmenter = SegmentationAlgorithm(segmentation_alg, kernel_size=1,
+                segmenter = SegmentationAlgorithm(segmentation_alg, kernel_size=4,
                                                   max_dist=200, ratio=0.2)
                 explanation = explainer.explain_instance(inputs,
+                                                         #labels=[0,1,2,3,4],
                                                          classifier_fn=self._predict,
                                                          top_labels=top_labels,
                                                          hide_color=0,
@@ -139,8 +140,8 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
 
                 temp = []
                 masks = []
-                logging.info("local-pred:{}".format(explanation.local_pred)
-                logging.info("local-exp:{}".format(explanation.local_exp)
+                logging.info("local-pred:{}".format(explanation.local_pred))
+                logging.info("local-exp:{}".format(explanation.local_exp))
                 for i in range(0, top_labels):
                     temp, mask = explanation.get_image_and_mask(explanation.top_labels[i],
                                                                 positive_only=positive_only,
