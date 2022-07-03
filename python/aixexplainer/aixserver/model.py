@@ -28,6 +28,7 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
     def __init__(self, name: str, predictor_host: str, segm_alg: str, num_samples: str,
                  top_labels: str, min_weight: str, positive_only: str, explainer_type: str):
         super().__init__(name)
+        logging.info('AIXModel, segm_alg:{}, positive_only:{},  explainer_type:{}, toplabel:{}'.format(segm_alg, positive_only, explainer_type, top_labels))
         self.name = name
         self.top_labels = int(top_labels)
         self.num_samples = int(num_samples)
@@ -126,7 +127,7 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
                 "Failed to initialize NumPy array from inputs: %s, %s" % (err, instances))
         try:
             if str.lower(self.explainer_type) == "limeimages":
-                explainer = LimeImageExplainer(verbose=False)
+                explainer = LimeImageExplainer(verbose=True)
                 segmenter = SegmentationAlgorithm(segmentation_alg, kernel_size=1,
                                                   max_dist=200, ratio=0.2)
                 explanation = explainer.explain_instance(inputs,
@@ -138,6 +139,8 @@ class AIXModel(kfserving.KFModel):  # pylint:disable=c-extension-no-member
 
                 temp = []
                 masks = []
+                logging.info("local-pred:{}".format(explanation.local_pred)
+                logging.info("local-exp:{}".format(explanation.local_exp)
                 for i in range(0, top_labels):
                     temp, mask = explanation.get_image_and_mask(explanation.top_labels[i],
                                                                 positive_only=positive_only,
