@@ -294,7 +294,7 @@ class ModelServer:
                 serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 serversocket.bind(("0.0.0.0", self.http_port))
                 serversocket.listen(5)
-                #multiprocessing.set_start_method("fork")
+                multiprocessing.set_start_method('spawn', force=True)
                 self._rest_server = UvicornServer(
                     self.http_port,
                     [serversocket],
@@ -306,9 +306,8 @@ class ModelServer:
                     log_config=None,
                     access_log_format=self.access_log_format,
                 )
-                context = multiprocessing.get_context('fork')
                 for _ in range(self.workers):
-                    p = context.Process(target=self._rest_server.run_sync)
+                    p = Process(target=self._rest_server.run_sync)
                     p.start()
 
         async def servers_task():
